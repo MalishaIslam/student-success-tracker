@@ -1,0 +1,8 @@
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+
+<h1>Something went wrong</h1>
+<p class="lede">@(ViewData["Message"] as string ?? "The request could not be completed. Please try again.")</p>
+<p class="note">If this keeps happening, quote reference <code>@ViewData["RequestId"]</code>. Details are in the server log.</p>
+<p><a class="btn" asp-controller="Home" asp-action="Index">Back to the dashboard</a></p>

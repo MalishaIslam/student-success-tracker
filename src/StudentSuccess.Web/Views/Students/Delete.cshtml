@@ -1,0 +1,30 @@
+@model EnrollmentDetail
+@{
+    ViewData["Title"] = $"Delete student {Model.StudentId}";
+    var results = Model.Assessments.Count(a => a.HasResult);
+}
+
+<p class="crumbs"><a asp-action="Index">Students</a> › <a asp-action="Details" asp-route-id="@Model.EnrollmentId">Student @Model.StudentId</a> › Delete</p>
+
+<h1>Delete this enrollment?</h1>
+
+<div class="confirm">
+    <p>You are about to delete <strong>student @Model.StudentId</strong> from <strong>@Model.Course</strong>.</p>
+    <ul>
+        <li>@results assessment result@(results == 1 ? "" : "s") for this course will also be deleted.</li>
+        @if (Model.OtherEnrollments.Count == 0)
+        {
+            <li>This is the student's only course, so <strong>the student record will be deleted too</strong>.</li>
+        }
+        else
+        {
+            <li>The student's @Model.OtherEnrollments.Count other course@(Model.OtherEnrollments.Count == 1 ? "" : "s") will be kept.</li>
+        }
+        <li>The deletion is recorded in the audit log. It can't be undone from this app.</li>
+    </ul>
+
+    <form asp-action="Delete" asp-route-id="@Model.EnrollmentId" method="post" class="form-actions">
+        <button type="submit" class="btn btn-danger">Yes, delete</button>
+        <a class="btn btn-quiet" asp-action="Details" asp-route-id="@Model.EnrollmentId">Cancel</a>
+    </form>
+</div>

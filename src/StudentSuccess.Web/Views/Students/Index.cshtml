@@ -1,0 +1,172 @@
+@model StudentsIndexViewModel
+@{
+    ViewData["Title"] = "Students";
+    var s = Model.Search;
+    var r = Model.Results;
+    var l = Model.Lookups;
+
+    // Sortable columns: (sort key, header text, numeric?)
+    var columns = new (string Key, string Label, bool Numeric)[]
+    {
+        ("StudentId", "Student ID", true),
+        ("Course", "Course", false),
+        ("Region", "Region", false),
+        ("AgeBand", "Age band", false),
+        ("Credits", "Credits", true),
+        ("Submitted", "Submitted", true),
+        ("AvgScore", "Avg score", true),
+        ("FinalResult", "Final result", false),
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1>Students</h1>
+        <p class="lede">Each row is one student in one course run. Search, filter, sort by any column, and open a row to edit it.</p>
+    </div>
+    <div class="actions">
+        <a class="btn btn-secondary" asp-action="Export" asp-all-route-data="@s.ToRouteValues(includePaging: false)">Export CSV</a>
+        <a class="btn" asp-action="Create">Add student</a>
+    </div>
+</div>
+
+<form class="filters" method="get" asp-action="Index" role="search" aria-label="Filter students">
+    <input type="hidden" name="sort" value="@s.Sort" />
+    <input type="hidden" name="dir" value="@s.Dir" />
+
+    <div class="field">
+        <label for="studentId">Student ID</label>
+        <input id="studentId" name="studentId" value="@s.StudentId" inputmode="numeric" autocomplete="off"
+               aria-describedby="@(s.HasInvalidStudentId ? "studentId-error" : null)" aria-invalid="@(s.HasInvalidStudentId ? "true" : null)" />
+        @if (s.HasInvalidStudentId)
+        {
+            <span id="studentId-error" class="field-error">Student ID must be a whole number.</span>
+        }
+    </div>
+
+    <div class="field">
+        <label for="module">Course</label>
+        <select id="module" name="module">
+            <option value="">All</option>
+            @foreach (var m in l.Modules)
+            {
+                <option value="@m" selected="@(m == s.Module)">@m</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="presentation">Run</label>
+        <select id="presentation" name="presentation">
+            <option value="">All</option>
+            @foreach (var p in l.PresentationCodes)
+            {
+                <option value="@p" selected="@(p == s.Presentation)">@p</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="region">Region</label>
+        <select id="region" name="region">
+            <option value="">All</option>
+            @foreach (var reg in l.Regions)
+            {
+                <option value="@reg" selected="@(reg == s.Region)">@reg</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="ageBand">Age band</label>
+        <select id="ageBand" name="ageBand">
+            <option value="">All</option>
+            @foreach (var a in l.AgeBands)
+            {
+                <option value="@a" selected="@(a == s.AgeBand)">@a</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="result">Final result</label>
+        <select id="result" name="result">
+            <option value="">All</option>
+            @foreach (var res in Lookups.FinalResults.Append(EnrollmentSearch.InProgress))
+            {
+                <option value="@res" selected="@(res == s.Result)">@res</option>
+            }
+        </select>
+    </div>
+
+    <div class="field">
+        <label for="pageSize">Rows per page</label>
+        <select id="pageSize" name="pageSize">
+            @foreach (var size in EnrollmentSearch.PageSizes)
+            {
+                <option value="@size" selected="@(size == s.PageSize)">@size</option>
+            }
+        </select>
+    </div>
+
+    <div class="filter-buttons">
+        <button type="submit" class="btn">Apply</button>
+        <a class="btn btn-quiet" asp-action="Index">Clear</a>
+    </div>
+</form>
+
+<p class="count" role="status">
+    @if (r.TotalCount == 0)
+    {
+        <text>No enrollments match these filters.</text>
+    }
+    else
+    {
+        <text>Showing @ViewHelpers.Number(r.FirstItem)–@ViewHelpers.Number(r.LastItem) of @ViewHelpers.Number(r.TotalCount) enrollments</text>
+    }
+</p>
+
+@if (r.Items.Count > 0)
+{
+    <div class="table-scroll">
+        <table class="data">
+            <caption class="visually-hidden">Enrollments. Select a column heading to sort by it.</caption>
+            <thead>
+                <tr>
+                    @foreach (var c in columns)
+                    {
+                        var aria = s.AriaSortFor(c.Key);
+                        <th scope="col" aria-sort="@aria" class="@(c.Numeric ? "num" : null)">
+                            <a class="sort" asp-action="Index" asp-all-route-data="@s.ToRouteValues(sort: c.Key, dir: s.NextDirectionFor(c.Key), page: 1)">
+                                @c.Label
+                                <span class="sort-icon" aria-hidden="true">@(aria == "ascending" ? "▲" : aria == "descending" ? "▼" : "↕")</span>
+                            </a>
+                        </th>
+                    }
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in r.Items)
+                {
+                    <tr>
+                        <td class="num">@row.StudentId</td>
+                        <td>@row.ModuleCode @row.PresentationCode</td>
+                        <td>@row.Region</td>
+                        <td>@row.AgeBand</td>
+                        <td class="num">@row.StudiedCredits</td>
+                        <td class="num">@row.SubmittedCount</td>
+                        <td class="num">@ViewHelpers.Score(row.AvgScore)</td>
+                        <td><span class="@ViewHelpers.ResultClass(row.FinalResult)">@ViewHelpers.ResultText(row.FinalResult)</span></td>
+                        <td class="row-actions">
+                            <a asp-action="Details" asp-route-id="@row.EnrollmentId" aria-label="View student @row.StudentId in @row.ModuleCode @row.PresentationCode">View</a>
+                            <a asp-action="Edit" asp-route-id="@row.EnrollmentId" aria-label="Edit student @row.StudentId in @row.ModuleCode @row.PresentationCode">Edit</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <partial name="_Pager" model="Model" />
+}

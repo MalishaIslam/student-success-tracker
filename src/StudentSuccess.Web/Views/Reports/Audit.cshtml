@@ -1,0 +1,41 @@
+@model IReadOnlyList<AuditEntry>
+@{
+    ViewData["Title"] = "Audit log";
+}
+
+<h1>Audit log</h1>
+<p class="lede">Every add, edit and delete made through this app: who, when, and what changed. Written by the stored procedures in the same transaction as the change.</p>
+
+@if (Model.Count == 0)
+{
+    <p>No changes yet. Edit a student and the change will appear here.</p>
+}
+else
+{
+    <div class="table-scroll">
+        <table class="data">
+            <caption class="visually-hidden">Most recent changes first</caption>
+            <thead>
+                <tr>
+                    <th scope="col">When (UTC)</th>
+                    <th scope="col">Who</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Record</th>
+                    <th scope="col">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td class="nowrap">@a.ChangedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>@a.ChangedBy</td>
+                        <td><span class="tag tag-@a.Action.ToLowerInvariant()">@a.Action</span></td>
+                        <td>@a.EntityName @a.EntityKey</td>
+                        <td>@a.Details</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

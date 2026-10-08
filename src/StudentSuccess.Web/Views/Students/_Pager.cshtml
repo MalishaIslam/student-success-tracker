@@ -1,0 +1,60 @@
+@model StudentsIndexViewModel
+@{
+    var s = Model.Search;
+    var r = Model.Results;
+    if (r.TotalPages <= 1)
+    {
+        return;
+    }
+
+    // Show the first, last, and up to two pages either side of the current one
+    var pages = new SortedSet<int> { 1, r.TotalPages };
+    for (var p = Math.Max(1, r.Page - 2); p <= Math.Min(r.TotalPages, r.Page + 2); p++)
+    {
+        pages.Add(p);
+    }
+}
+
+<nav class="pager" aria-label="Pages">
+    <ul>
+        <li>
+            @if (r.HasPrevious)
+            {
+                <a asp-action="Index" asp-all-route-data="@s.ToRouteValues(page: r.Page - 1)" rel="prev">‹ Previous</a>
+            }
+            else
+            {
+                <span class="disabled" aria-disabled="true">‹ Previous</span>
+            }
+        </li>
+        @{ var last = 0; }
+        @foreach (var p in pages)
+        {
+            if (p - last > 1)
+            {
+                <li><span class="gap" aria-hidden="true">…</span></li>
+            }
+            <li>
+                @if (p == r.Page)
+                {
+                    <span class="current" aria-current="page">@p</span>
+                }
+                else
+                {
+                    <a asp-action="Index" asp-all-route-data="@s.ToRouteValues(page: p)" aria-label="Page @p">@p</a>
+                }
+            </li>
+            last = p;
+        }
+        <li>
+            @if (r.HasNext)
+            {
+                <a asp-action="Index" asp-all-route-data="@s.ToRouteValues(page: r.Page + 1)" rel="next">Next ›</a>
+            }
+            else
+            {
+                <span class="disabled" aria-disabled="true">Next ›</span>
+            }
+        </li>
+    </ul>
+</nav>

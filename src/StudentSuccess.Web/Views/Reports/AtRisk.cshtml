@@ -1,0 +1,123 @@
+@model AtRiskViewModel
+@{
+    ViewData["Title"] = "At-risk report";
+    var q = Model.Query;
+    var report = Model.Report;
+    string? ErrorFor(string key) =>
+        ViewData.ModelState.TryGetValue(key, out var entry) && entry.Errors.Count > 0 ? entry.Errors[0].ErrorMessage : null;
+}
+
+<div class="page-head">
+    <div>
+        <h1>At-risk report</h1>
+        <p class="lede">
+            An early-warning rule: among students still registered on a given day, flag anyone who had missed
+            coursework deadlines or was averaging a low score by then. Because this dataset already has final
+            results, the summary shows how well the rule would have predicted who failed or withdrew.
+        </p>
+    </div>
+</div>
+
+<form class="filters" method="get" asp-action="AtRisk" aria-label="Report settings">
+    <div class="field">
+        <label for="presentationId">Course run</label>
+        <select id="presentationId" name="presentationId">
+            <option value="">All course runs</option>
+            @foreach (var p in Model.Lookups.Presentations)
+            {
+                <option value="@p.Id" selected="@(p.Id == q.PresentationId)">@p.Label</option>
+            }
+        </select>
+    </div>
+    <div class="field">
+        <label for="cutoffDay">Check on day</label>
+        <input id="cutoffDay" name="cutoffDay" type="number" min="1" max="400" value="@q.CutoffDay" aria-invalid="@(ErrorFor("CutoffDay") is null ? null : "true")" />
+        <span class="field-error">@ErrorFor("CutoffDay")</span>
+    </div>
+    <div class="field">
+        <label for="minMissed">Missed deadlines ≥</label>
+        <input id="minMissed" name="minMissed" type="number" min="1" max="20" value="@q.MinMissed" aria-invalid="@(ErrorFor("MinMissed") is null ? null : "true")" />
+        <span class="field-error">@ErrorFor("MinMissed")</span>
+    </div>
+    <div class="field">
+        <label for="scoreThreshold">or average score below</label>
+        <input id="scoreThreshold" name="scoreThreshold" type="number" min="0" max="100" step="1" value="@q.ScoreThreshold.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" aria-invalid="@(ErrorFor("ScoreThreshold") is null ? null : "true")" />
+        <span class="field-error">@ErrorFor("ScoreThreshold")</span>
+    </div>
+    <div class="filter-buttons">
+        <button type="submit" class="btn">Run report</button>
+        <a class="btn btn-quiet" asp-action="AtRisk">Reset</a>
+    </div>
+</form>
+
+@if (report is not null)
+{
+    <section class="block" aria-labelledby="summary-heading">
+        <h2 id="summary-heading">How did flagged students finish?</h2>
+        <div class="cards">
+            @foreach (var (label, g) in new[] { ("Flagged on day " + q.CutoffDay, report.Flagged), ("Not flagged", report.NotFlagged) })
+            {
+                <div class="card">
+                    <h3>@label</h3>
+                    @if (g is null)
+                    {
+                        <p class="muted">No students.</p>
+                    }
+                    else
+                    {
+                        <p class="big">@ViewHelpers.Pct(g.FailedOrWithdrewPct)</p>
+                        <p>failed or withdrew</p>
+                        <dl class="facts">
+                            <dt>Students</dt><dd>@ViewHelpers.Number(g.Students)</dd>
+                            <dt>Passed</dt><dd>@ViewHelpers.Number(g.Passed)</dd>
+                            <dt>Failed or withdrew</dt><dd>@ViewHelpers.Number(g.FailedOrWithdrew)</dd>
+                            <dt>In progress</dt><dd>@ViewHelpers.Number(g.InProgress)</dd>
+                        </dl>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="block" aria-labelledby="flagged-heading">
+        <h2 id="flagged-heading">Flagged students</h2>
+        @if (report.Rows.Count == 0)
+        {
+            <p>No students match the rule.</p>
+        }
+        else
+        {
+            <p class="count">Showing @ViewHelpers.Number(report.Rows.Count)@(report.Rows.Count == AtRiskQuery.MaxRows ? $" (first {AtRiskQuery.MaxRows})" : ""), most missed deadlines first.</p>
+            <div class="table-scroll">
+                <table class="data">
+                    <caption class="visually-hidden">Students flagged by the early-warning rule</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col" class="num">Student ID</th>
+                            <th scope="col">Course</th>
+                            <th scope="col" class="num">Due by day @q.CutoffDay</th>
+                            <th scope="col" class="num">Submitted</th>
+                            <th scope="col" class="num">Missed</th>
+                            <th scope="col" class="num">Avg score</th>
+                            <th scope="col">Actual result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in report.Rows)
+                        {
+                            <tr>
+                                <td class="num"><a asp-controller="Students" asp-action="Details" asp-route-id="@row.EnrollmentId">@row.StudentId</a></td>
+                                <td>@row.ModuleCode @row.PresentationCode</td>
+                                <td class="num">@row.DueCount</td>
+                                <td class="num">@row.SubmittedCount</td>
+                                <td class="num">@row.MissedCount</td>
+                                <td class="num">@ViewHelpers.Score(row.AvgScore)</td>
+                                <td><span class="@ViewHelpers.ResultClass(row.FinalResult)">@ViewHelpers.ResultText(row.FinalResult)</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

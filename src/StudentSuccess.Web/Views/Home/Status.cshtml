@@ -1,0 +1,15 @@
+@{
+    var code = ViewData["Code"] as int? ?? 0;
+    var (title, text) = code switch
+    {
+        404 => ("Page not found", "That page or record doesn't exist. It may have been deleted."),
+        403 => ("Not allowed", "You don't have permission to see this page."),
+        429 => ("Too many attempts", "Please wait a minute and try again."),
+        _ => ("Something went wrong", "The request could not be completed."),
+    };
+    ViewData["Title"] = title;
+}
+
+<h1>@title</h1>
+<p class="lede">@text</p>
+<p><a class="btn" asp-controller="Home" asp-action="Index">Back to the dashboard</a></p>

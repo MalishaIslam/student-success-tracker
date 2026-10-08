@@ -1,0 +1,82 @@
+@model Dashboard
+@{
+    ViewData["Title"] = "Dashboard";
+    var t = Model.Totals;
+}
+
+<div class="page-head">
+    <div>
+        <h1>Dashboard</h1>
+        <p class="lede">Outcomes for every course run in the database. Every number comes from the stored procedure <code>usp_Dashboard_Get</code>.</p>
+    </div>
+    <a class="btn" asp-controller="Students" asp-action="Create">Add student</a>
+</div>
+
+<section aria-labelledby="totals-heading">
+    <h2 id="totals-heading" class="visually-hidden">Totals</h2>
+    <dl class="stats">
+        <div class="stat"><dt>Students</dt><dd>@ViewHelpers.Number(t.Students)</dd></div>
+        <div class="stat"><dt>Enrollments</dt><dd>@ViewHelpers.Number(t.Enrollments)</dd></div>
+        <div class="stat"><dt>Course runs</dt><dd>@ViewHelpers.Number(t.CourseRuns)</dd></div>
+        <div class="stat"><dt>Assessment results</dt><dd>@ViewHelpers.Number(t.AssessmentResults)</dd></div>
+        <div class="stat"><dt>Pass rate</dt><dd>@ViewHelpers.Pct(t.PassRatePct)</dd></div>
+        <div class="stat"><dt>Withdrawal rate</dt><dd>@ViewHelpers.Pct(t.WithdrawalRatePct)</dd></div>
+    </dl>
+</section>
+
+<section class="block" aria-labelledby="courses-heading">
+    <div class="block-head">
+        <h2 id="courses-heading">Outcomes by course run</h2>
+        <ul class="legend" aria-hidden="true">
+            <li><span class="swatch seg-distinction"></span>Distinction</li>
+            <li><span class="swatch seg-pass"></span>Pass</li>
+            <li><span class="swatch seg-fail"></span>Fail</li>
+            <li><span class="swatch seg-withdrawn"></span>Withdrawn</li>
+            <li><span class="swatch seg-progress"></span>In progress</li>
+        </ul>
+    </div>
+
+    <div class="table-scroll">
+        <table class="data">
+            <caption class="visually-hidden">Number of students by final result for each course run</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Course</th>
+                    <th scope="col" class="num">Enrolled</th>
+                    <th scope="col" class="num">Distinction</th>
+                    <th scope="col" class="num">Pass</th>
+                    <th scope="col" class="num">Fail</th>
+                    <th scope="col" class="num">Withdrawn</th>
+                    <th scope="col" class="num">Pass rate</th>
+                    <th scope="col" class="bar-col"><span class="visually-hidden">Chart</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Courses)
+                {
+                    <tr>
+                        <th scope="row">
+                            <a asp-controller="Students" asp-action="Index" asp-route-module="@c.ModuleCode" asp-route-presentation="@c.PresentationCode">@c.Course</a>
+                        </th>
+                        <td class="num">@ViewHelpers.Number(c.Enrollments)</td>
+                        <td class="num">@ViewHelpers.Number(c.Distinction)</td>
+                        <td class="num">@ViewHelpers.Number(c.Pass)</td>
+                        <td class="num">@ViewHelpers.Number(c.Fail)</td>
+                        <td class="num">@ViewHelpers.Number(c.Withdrawn)</td>
+                        <td class="num">@ViewHelpers.Pct(c.PassRatePct)</td>
+                        <td class="bar-col">
+                            <div class="bar" aria-hidden="true">
+                                <span class="seg seg-distinction" style="width: @ViewHelpers.Width(c.Share(c.Distinction))"></span>
+                                <span class="seg seg-pass" style="width: @ViewHelpers.Width(c.Share(c.Pass))"></span>
+                                <span class="seg seg-fail" style="width: @ViewHelpers.Width(c.Share(c.Fail))"></span>
+                                <span class="seg seg-withdrawn" style="width: @ViewHelpers.Width(c.Share(c.Withdrawn))"></span>
+                                <span class="seg seg-progress" style="width: @ViewHelpers.Width(c.Share(c.InProgress))"></span>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="note">Pass rate = Pass + Distinction, out of students with a final result. Select a course to see its students.</p>
+</section>

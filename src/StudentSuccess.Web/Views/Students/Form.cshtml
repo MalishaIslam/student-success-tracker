@@ -1,0 +1,169 @@
+@model StudentFormViewModel
+@{
+    var f = Model.Form;
+    var l = Model.Lookups;
+    var title = Model.IsEdit ? $"Edit student {Model.Existing!.StudentId}" : "Add student";
+    ViewData["Title"] = title;
+}
+
+<p class="crumbs">
+    <a asp-action="Index">Students</a> ›
+    @if (Model.IsEdit)
+    {
+        <a asp-action="Details" asp-route-id="@Model.Existing!.EnrollmentId">Student @Model.Existing!.StudentId</a> <text>› Edit</text>
+    }
+    else
+    {
+        <text>Add</text>
+    }
+</p>
+
+<h1>@title</h1>
+<p class="lede">
+    @if (Model.IsEdit)
+    {
+        <text>Course: <strong>@Model.Existing!.Course</strong>. The course can't be changed; delete and re-add the enrollment instead.</text>
+    }
+    else
+    {
+        <text>Creates a new student and enrolls them in one course run. A new student ID is assigned automatically.</text>
+    }
+</p>
+
+<form method="post" asp-action="@(Model.IsEdit ? "Edit" : "Create")" asp-route-id="@Model.Existing?.EnrollmentId" class="record-form" novalidate>
+    <div asp-validation-summary="All" class="error-summary" role="alert">
+        <p><strong>Please fix the following:</strong></p>
+    </div>
+
+    <input type="hidden" name="RowVersion" value="@f.RowVersion" />
+
+    <fieldset>
+        <legend>Student</legend>
+        <div class="form-grid">
+            <div class="field">
+                <label for="Gender">Gender</label>
+                <select id="Gender" name="Gender" aria-invalid="@Invalid("Gender")">
+                    <option value="">Choose…</option>
+                    <option value="F" selected="@(f.Gender == "F")">Female</option>
+                    <option value="M" selected="@(f.Gender == "M")">Male</option>
+                </select>
+                <span class="field-error" id="Gender-error">@ErrorFor("Gender")</span>
+            </div>
+
+            <div class="field">
+                <label for="Region">Region</label>
+                <select id="Region" name="Region" aria-invalid="@Invalid("Region")">
+                    <option value="">Choose…</option>
+                    @foreach (var x in l.Regions) { <option value="@x" selected="@(x == f.Region)">@x</option> }
+                </select>
+                <span class="field-error" id="Region-error">@ErrorFor("Region")</span>
+            </div>
+
+            <div class="field">
+                <label for="AgeBand">Age band</label>
+                <select id="AgeBand" name="AgeBand" aria-invalid="@Invalid("AgeBand")">
+                    <option value="">Choose…</option>
+                    @foreach (var x in l.AgeBands) { <option value="@x" selected="@(x == f.AgeBand)">@x</option> }
+                </select>
+                <span class="field-error" id="AgeBand-error">@ErrorFor("AgeBand")</span>
+            </div>
+
+            <div class="field">
+                <label for="HighestEducation">Highest education</label>
+                <select id="HighestEducation" name="HighestEducation" aria-invalid="@Invalid("HighestEducation")">
+                    <option value="">Choose…</option>
+                    @foreach (var x in l.EducationLevels) { <option value="@x" selected="@(x == f.HighestEducation)">@x</option> }
+                </select>
+                <span class="field-error" id="HighestEducation-error">@ErrorFor("HighestEducation")</span>
+            </div>
+
+            <div class="field">
+                <label for="ImdBand">Deprivation band (IMD)</label>
+                <select id="ImdBand" name="ImdBand" aria-describedby="ImdBand-hint">
+                    <option value="">Unknown</option>
+                    @foreach (var x in l.ImdBands) { <option value="@x" selected="@(x == f.ImdBand)">@x</option> }
+                </select>
+                <span id="ImdBand-hint" class="hint">Index of Multiple Deprivation band of the student's home area.</span>
+            </div>
+
+            <div class="field checkbox">
+                <input id="HasDisability" name="HasDisability" type="checkbox" value="true" checked="@f.HasDisability" />
+                <label for="HasDisability">Has a declared disability</label>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Enrollment</legend>
+        <div class="form-grid">
+            @if (!Model.IsEdit)
+            {
+                <div class="field">
+                    <label for="PresentationId">Course run</label>
+                    <select id="PresentationId" name="PresentationId" aria-invalid="@Invalid("PresentationId")">
+                        <option value="">Choose…</option>
+                        @foreach (var p in l.Presentations) { <option value="@p.Id" selected="@(p.Id == f.PresentationId)">@p.Label</option> }
+                    </select>
+                    <span class="field-error" id="PresentationId-error">@ErrorFor("PresentationId")</span>
+                </div>
+            }
+
+            <div class="field">
+                <label for="StudiedCredits">Studied credits</label>
+                <input id="StudiedCredits" name="StudiedCredits" aria-invalid="@Invalid("StudiedCredits")" type="number" min="1" max="1000" value="@f.StudiedCredits" required />
+                <span class="field-error" id="StudiedCredits-error">@ErrorFor("StudiedCredits")</span>
+            </div>
+
+            <div class="field">
+                <label for="PreviousAttempts">Previous attempts</label>
+                <input id="PreviousAttempts" name="PreviousAttempts" aria-invalid="@Invalid("PreviousAttempts")" type="number" min="0" max="20" value="@f.PreviousAttempts" />
+                <span class="field-error" id="PreviousAttempts-error">@ErrorFor("PreviousAttempts")</span>
+            </div>
+
+            <div class="field">
+                <label for="RegistrationDay">Registration day</label>
+                <input id="RegistrationDay" name="RegistrationDay" aria-invalid="@Invalid("RegistrationDay")" type="number" min="-400" max="400" value="@f.RegistrationDay" aria-describedby="days-hint" />
+                <span class="field-error" id="RegistrationDay-error">@ErrorFor("RegistrationDay")</span>
+            </div>
+
+            <div class="field">
+                <label for="UnregistrationDay">Unregistration day</label>
+                <input id="UnregistrationDay" name="UnregistrationDay" aria-invalid="@Invalid("UnregistrationDay")" type="number" min="-400" max="800" value="@f.UnregistrationDay" aria-describedby="days-hint" />
+                <span class="field-error" id="UnregistrationDay-error">@ErrorFor("UnregistrationDay")</span>
+            </div>
+
+            <div class="field">
+                <label for="FinalResult">Final result</label>
+                <select id="FinalResult" name="FinalResult" aria-invalid="@Invalid("FinalResult")">
+                    <option value="">In progress</option>
+                    @foreach (var x in Lookups.FinalResults) { <option value="@x" selected="@(x == f.FinalResult)">@x</option> }
+                </select>
+                <span class="field-error" id="FinalResult-error">@ErrorFor("FinalResult")</span>
+            </div>
+        </div>
+        <p id="days-hint" class="hint">Days are counted from the course start. Negative = before it started. Leave unregistration empty if the student didn't withdraw.</p>
+    </fieldset>
+
+    <div class="form-actions">
+        <button type="submit" class="btn">@(Model.IsEdit ? "Save changes" : "Add student")</button>
+        @if (Model.IsEdit)
+        {
+            <a class="btn btn-quiet" asp-action="Details" asp-route-id="@Model.Existing!.EnrollmentId">Cancel</a>
+        }
+        else
+        {
+            <a class="btn btn-quiet" asp-action="Index">Cancel</a>
+        }
+    </div>
+</form>
+
+@functions {
+    /// <summary>"true" when the field failed validation, so screen readers announce it.</summary>
+    private string? Invalid(string field) => ErrorFor(field) is null ? null : "true";
+
+    /// <summary>First validation message for a form field, or empty.</summary>
+    private string? ErrorFor(string field) =>
+        ViewData.ModelState.TryGetValue(field, out var entry) && entry.Errors.Count > 0
+            ? entry.Errors[0].ErrorMessage
+            : null;
+}

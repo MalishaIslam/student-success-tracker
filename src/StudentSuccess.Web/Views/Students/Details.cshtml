@@ -1,0 +1,153 @@
+@model StudentDetailsViewModel
+@{
+    var e = Model.Enrollment;
+    ViewData["Title"] = $"Student {e.StudentId}";
+}
+
+<p class="crumbs"><a asp-action="Index">Students</a> › Student @e.StudentId</p>
+
+<div class="page-head">
+    <div>
+        <h1>Student @e.StudentId <span class="@ViewHelpers.ResultClass(e.FinalResult)">@ViewHelpers.ResultText(e.FinalResult)</span></h1>
+        <p class="lede">Enrolled in <strong>@e.Course</strong>. Last changed @e.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC.</p>
+    </div>
+    <div class="actions">
+        <a class="btn" asp-action="Edit" asp-route-id="@e.EnrollmentId">Edit</a>
+        <a class="btn btn-danger" asp-action="Delete" asp-route-id="@e.EnrollmentId">Delete</a>
+    </div>
+</div>
+
+<div class="cards">
+    <section class="card" aria-labelledby="student-heading">
+        <h2 id="student-heading">Student</h2>
+        <dl class="facts">
+            <dt>Gender</dt><dd>@ViewHelpers.Gender(e.Gender)</dd>
+            <dt>Region</dt><dd>@e.Region</dd>
+            <dt>Age band</dt><dd>@e.AgeBand</dd>
+            <dt>Highest education</dt><dd>@e.HighestEducation</dd>
+            <dt>Deprivation band (IMD)</dt><dd>@(e.ImdBand ?? "Unknown")</dd>
+            <dt>Declared disability</dt><dd>@(e.HasDisability ? "Yes" : "No")</dd>
+        </dl>
+    </section>
+
+    <section class="card" aria-labelledby="enrollment-heading">
+        <h2 id="enrollment-heading">Enrollment</h2>
+        <dl class="facts">
+            <dt>Course run</dt><dd>@e.Course@(e.LengthDays is int len ? $" ({len} days)" : "")</dd>
+            <dt>Studied credits</dt><dd>@e.StudiedCredits</dd>
+            <dt>Previous attempts</dt><dd>@e.PreviousAttempts</dd>
+            <dt>Registered</dt><dd>@ViewHelpers.Day(e.RegistrationDay)</dd>
+            <dt>Unregistered</dt><dd>@(e.UnregistrationDay is null ? "Did not unregister" : ViewHelpers.Day(e.UnregistrationDay))</dd>
+            <dt>Average score</dt><dd>@ViewHelpers.Score(e.AverageScore)</dd>
+        </dl>
+    </section>
+</div>
+
+<section class="block" id="assessments" aria-labelledby="assessments-heading">
+    <h2 id="assessments-heading">Assessments in @e.Course</h2>
+
+    @if (e.Assessments.Count == 0)
+    {
+        <p>This course run has no assessments.</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <caption class="visually-hidden">Assessments and this student's results</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" class="num">ID</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Due</th>
+                        <th scope="col" class="num">Weight</th>
+                        <th scope="col">Submitted</th>
+                        <th scope="col" class="num">Score</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in e.Assessments)
+                    {
+                        <tr class="@(a.HasResult ? null : "missing")">
+                            <td class="num">@a.AssessmentId</td>
+                            <td>@ViewHelpers.AssessmentType(a.AssessmentType)</td>
+                            <td>@ViewHelpers.Day(a.DueDay)</td>
+                            <td class="num">@a.WeightPercent.ToString("0.#")%</td>
+                            <td>
+                                @if (a.HasResult)
+                                {
+                                    @ViewHelpers.Day(a.SubmittedDay)
+                                    @if (a.IsBanked) { <span class="tag">carried over</span> }
+                                }
+                                else
+                                {
+                                    <span class="muted">No result</span>
+                                }
+                            </td>
+                            <td class="num">@(a.HasResult ? ViewHelpers.Score(a.Score) : "")</td>
+                            <td class="row-actions">
+                                @if (a.HasResult)
+                                {
+                                    <form asp-action="DeleteScore" asp-route-id="@e.EnrollmentId" method="post" class="inline">
+                                        <input type="hidden" name="assessmentId" value="@a.AssessmentId" />
+                                        <button type="submit" class="link-button" aria-label="Remove result for assessment @a.AssessmentId">Remove</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <form class="score-form" asp-action="SaveScore" asp-route-id="@e.EnrollmentId" method="post">
+            <h3>Add or change a result</h3>
+            <p class="note">Choosing an assessment that already has a result replaces it.</p>
+            <div class="form-row">
+                <div class="field">
+                    <label for="AssessmentId">Assessment</label>
+                    <select id="AssessmentId" name="AssessmentId">
+                        @foreach (var a in e.Assessments)
+                        {
+                            <option value="@a.AssessmentId" selected="@(a.AssessmentId == Model.NewScore.AssessmentId)">
+                                @a.AssessmentId · @ViewHelpers.AssessmentType(a.AssessmentType) · @ViewHelpers.Day(a.DueDay)@(a.HasResult ? $" · now {ViewHelpers.Score(a.Score)}" : "")
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="Score">Score (0–100)</label>
+                    <input id="Score" name="Score" type="number" min="0" max="100" step="0.5" inputmode="decimal" />
+                </div>
+                <div class="field">
+                    <label for="SubmittedDay">Submitted on day</label>
+                    <input id="SubmittedDay" name="SubmittedDay" type="number" min="-400" max="800" step="1" />
+                </div>
+                <div class="field checkbox">
+                    <input id="IsBanked" name="IsBanked" type="checkbox" value="true" />
+                    <label for="IsBanked">Carried over from an earlier attempt</label>
+                </div>
+                <div class="field">
+                    <button type="submit" class="btn">Save result</button>
+                </div>
+            </div>
+        </form>
+    }
+</section>
+
+@if (e.OtherEnrollments.Count > 0)
+{
+    <section class="block" aria-labelledby="other-heading">
+        <h2 id="other-heading">This student's other courses</h2>
+        <ul class="plain-list">
+            @foreach (var o in e.OtherEnrollments)
+            {
+                <li>
+                    <a asp-action="Details" asp-route-id="@o.EnrollmentId">@o.ModuleCode @o.PresentationCode</a>
+                    <span class="@ViewHelpers.ResultClass(o.FinalResult)">@ViewHelpers.ResultText(o.FinalResult)</span>
+                </li>
+            }
+        </ul>
+    </section>
+}

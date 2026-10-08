@@ -1,0 +1,67 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    string? Current(string c, string? a = null) =>
+        string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) &&
+        (a is null || string.Equals(action, a, StringComparison.OrdinalIgnoreCase)) ? "page" : null;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Student Success Tracker</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="~/js/site.js" asp-append-version="true" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <header class="topbar">
+        <div class="wrap topbar-inner">
+            <a class="brand" asp-controller="Home" asp-action="Index">
+                <span class="brand-mark" aria-hidden="true">SS</span>
+                <span>Student Success Tracker</span>
+            </a>
+            @if (signedIn)
+            {
+                <nav aria-label="Main">
+                    <ul class="nav">
+                        <li><a asp-controller="Home" asp-action="Index" aria-current="@Current("Home")">Dashboard</a></li>
+                        <li><a asp-controller="Students" asp-action="Index" aria-current="@Current("Students")">Students</a></li>
+                        <li><a asp-controller="Reports" asp-action="AtRisk" aria-current="@Current("Reports", "AtRisk")">At-risk report</a></li>
+                        <li><a asp-controller="Reports" asp-action="Audit" aria-current="@Current("Reports", "Audit")">Audit log</a></li>
+                        <li><a href="~/docs.html">API</a></li>
+                    </ul>
+                </nav>
+                <form class="signout" asp-controller="Account" asp-action="Logout" method="post">
+                    <span class="user">@User.Identity!.Name</span>
+                    <button type="submit" class="btn btn-quiet">Sign out</button>
+                </form>
+            }
+        </div>
+    </header>
+
+    <main id="main" class="wrap" tabindex="-1">
+        @if (TempData["Message"] is string message)
+        {
+            <p class="flash flash-ok" role="status">@message</p>
+        }
+        @if (TempData["Error"] is string error)
+        {
+            <p class="flash flash-error" role="alert">@error</p>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="wrap footer">
+        <p>
+            Data: <a href="https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset">Open University Learning Analytics Dataset</a>
+            (Kuzilek, Hlosta &amp; Zdrahal, 2017), licensed CC BY 4.0. Anonymised data; student IDs are not real identities.
+        </p>
+        <p>Built with ASP.NET Core MVC and SQL Server.</p>
+    </footer>
+</body>
+</html>
