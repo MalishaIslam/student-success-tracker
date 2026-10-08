@@ -1,0 +1,16 @@
+code_module,code_presentation,id_assessment,assessment_type,date,weight
+"AAA","2013J",1001,"TMA",19,10
+"AAA","2013J",1002,"TMA",54,20
+"AAA","2013J",1003,"CMA",40,0
+"AAA","2013J",1004,"TMA",117,20
+"AAA","2013J",1005,"Exam",,100
+"AAA","2014J",1006,"TMA",19,10
+"AAA","2014J",1007,"TMA",54,20
+"AAA","2014J",1008,"CMA",40,0
+"AAA","2014J",1009,"TMA",117,20
+"AAA","2014J",1010,"Exam",,100
+"BBB","2013B",1011,"TMA",19,10
+"BBB","2013B",1012,"TMA",54,20
+"BBB","2013B",1013,"CMA",40,0
+"BBB","2013B",1014,"TMA",117,20
+"BBB","2013B",1015,"Exam",,100
