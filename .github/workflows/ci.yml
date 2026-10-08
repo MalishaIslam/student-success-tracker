@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore StudentSuccess.sln
+
+      - name: Build
+        run: dotnet build StudentSuccess.sln --no-restore -c Release
+
+      - name: Unit tests
+        run: dotnet test StudentSuccess.sln --no-build -c Release --verbosity normal
+
+  integration:
+    name: SQL Server + web app end-to-end
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci-Sa-Passw0rd-2026
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci-Sa-Passw0rd-2026 -Q 'SELECT 1' -b || /opt/mssql-tools/bin/sqlcmd -C -S localhost -U sa -P Ci-Sa-Passw0rd-2026 -Q 'SELECT 1' -b"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+          --health-start-period 20s
+
+    env:
+      SA_PASSWORD: Ci-Sa-Passw0rd-2026
+      APP_DB_PASSWORD: Ci-App-Passw0rd-2026
+      ADMIN_PASSWORD: Ci-Web-Passw0rd-2026
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Uses the small synthetic sample in sample-data/, not the real dataset
+      - name: Create the database and import the sample CSVs
+        run: |
+          id="${{ job.services.sqlserver.id }}"
+          docker cp database "$id":/scripts
+          docker cp sample-data "$id":/data
+          docker cp scripts/init-db.sh "$id":/init-db.sh
+          docker exec -u 0 -e SA_PASSWORD -e APP_DB_PASSWORD -e DB_HOST=localhost "$id" bash /init-db.sh
+
+      - name: Second run keeps the data (only refreshes procedures)
+        run: |
+          docker exec -u 0 -e SA_PASSWORD -e APP_DB_PASSWORD -e DB_HOST=localhost \
+            "${{ job.services.sqlserver.id }}" bash /init-db.sh | tee second-run.log
+          grep -q "keeping existing data" second-run.log
+
+      - name: Start the web app
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          ConnectionStrings__StudentSuccess: "Server=localhost,1433;Database=StudentSuccess;User Id=student_app;Password=Ci-App-Passw0rd-2026;TrustServerCertificate=True"
+          Auth__Password: Ci-Web-Passw0rd-2026
+        run: |
+          dotnet run --project src/StudentSuccess.Web -c Release --urls http://localhost:5080 > web.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:5080/health > /dev/null && echo "App is up" && exit 0
+            sleep 2
+          done
+          echo "App did not become healthy"; exit 1
+
+      - name: End-to-end smoke test
+        run: bash scripts/smoke-test.sh http://localhost:5080 admin "$ADMIN_PASSWORD"
+
+      - name: Show app log
+        if: always()
+        run: cat web.log || true

@@ -1,0 +1,71 @@
+# One command starts SQL Server, loads the dataset, and runs the web app:
+#   docker compose up --build
+# Then open http://localhost:5080
+#
+# The first start imports the CSV files (a minute or two). Later starts keep
+# your data, including changes made in the app. To reload from the CSV files:
+#   docker compose run --rm -e RESET_DB=1 db-init
+
+name: student-success
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64            # runs on Apple Silicon Macs through Rosetta
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:?Set SA_PASSWORD in .env (copy .env.example)}
+    ports:
+      - "1433:1433"                  # lets VS Code / DBeaver on your Mac connect to localhost,1433
+    volumes:
+      - sqldata:/var/opt/mssql       # the database files: kept between restarts
+      - importdata:/import:ro        # CSV files prepared by db-init, read by BULK INSERT
+    healthcheck:
+      # Newer images keep sqlcmd in mssql-tools18, older ones in mssql-tools
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' -b -o /dev/null || /opt/mssql-tools/bin/sqlcmd -C -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  db-init:
+    # Same image, used only for its sqlcmd tool: sets up the database, then exits
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    user: "0:0"                      # needs to write the prepared CSVs into the shared volume
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      DB_HOST: sqlserver
+      SA_PASSWORD: ${SA_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?Set APP_DB_PASSWORD in .env}
+      RESET_DB: ${RESET_DB:-0}
+    volumes:
+      - ./database:/scripts:ro
+      - ./scripts/init-db.sh:/init-db.sh:ro
+      - ${DATA_DIR:-./data}:/data:ro
+      - importdata:/import
+    entrypoint: ["/bin/bash", "/init-db.sh"]
+    restart: "no"
+
+  web:
+    build:
+      context: .
+      dockerfile: src/StudentSuccess.Web/Dockerfile
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # The app signs in to SQL Server as the EXECUTE-only login, never as sa
+      ConnectionStrings__StudentSuccess: "Server=sqlserver,1433;Database=StudentSuccess;User Id=student_app;Password=${APP_DB_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      Auth__Username: ${ADMIN_USERNAME:-admin}
+      Auth__Password: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    ports:
+      - "5080:8080"
+
+volumes:
+  sqldata:
+  importdata:

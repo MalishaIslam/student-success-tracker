@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# The downloaded dataset (large; anyone can download it with scripts/get-data.sh)
+data/
+
+# Build output
+bin/
+obj/
+TestResults/
+*.user
+
+# Editors and OS
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
