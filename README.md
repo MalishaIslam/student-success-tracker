@@ -20,6 +20,32 @@ VS Code with the SQL Server (mssql) extension
 |---|---|---|
 | ![Dashboard with totals and results for each course run](docs/images/app-dashboard.png) | ![Students list filtered and sorted](docs/images/app-students.png) | ![At-risk report](docs/images/app-at-risk.png) |
 
+## Demo videos
+
+**Add a student**
+
+https://github.com/user-attachments/assets/c3142040-6a6e-4f3d-afb7-d59897348a0a
+
+
+**Edit student info**
+
+
+
+https://github.com/user-attachments/assets/d1e11e2e-77a9-4fa5-b04e-f4316a6a52e4
+
+
+
+**Delete a student with the audit log**
+
+
+
+https://github.com/user-attachments/assets/f73208e4-269c-49c0-bce2-d17e6aa3a23b
+
+
+
+
+
+
 ## Features
 
 | Page | What it does |
