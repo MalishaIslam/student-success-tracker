@@ -2,7 +2,7 @@
 .env
 
 # The downloaded dataset (large; anyone can download it with scripts/get-data.sh)
-data/
+/data/
 
 # Build output
 bin/
