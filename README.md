@@ -5,7 +5,7 @@
 Built by **Malisha Islam Tapotee** · [Portfolio](https://malishaislam.github.io/)
 
 A web application for student-support staff, built on **SQL Server** and **ASP.NET Core MVC**.
-It loads 32,000+ anonymised student records from the
+It loads 32,000+ anonymised enrollment records (about 28,800 students) from the
 [Open University Learning Analytics Dataset](https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset)
 and lets signed-in staff search, filter, sort, add, edit and delete records, record assessment
 scores, see course outcomes, and run an early-warning report of students at risk of failing.
